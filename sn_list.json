@@ -1,0 +1,12 @@
+{
+    "41973921": {"coeff_trans": 1, "opisanie": "Sauni"},
+    "41974181": {"coeff_trans": 1, "opisanie": "Futbolnie_polya"},
+    "13102947": {"coeff_trans": 80, "opisanie": "GRSH_2_tex_vent_cokol_BZ"},
+    "13102944": {"coeff_trans": 80, "opisanie": "GRSH_2_Stolovata"},
+    "14734043": {"coeff_trans": 80, "opisanie": "GRSH_3_vvod_1"},
+    "13082003": {"coeff_trans": 80, "opisanie": "GRSH_1_vvod_2_B1_B2_B7_prach"},
+    "14734031": {"coeff_trans": 40, "opisanie": "GRSH_1_lift_SHAO_SHO_POJ7blok_koteln1"},
+    "13104234": {"coeff_trans": 40, "opisanie": "GRSH_1_prach"},
+    "14734041": {"coeff_trans": 40, "opisanie": "GRSH_1_block2"},
+    "13104172": {"coeff_trans": 120, "opisanie": "Chiler_256"}
+}
