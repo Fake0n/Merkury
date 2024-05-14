@@ -1,2 +1,2 @@
 # Merkury
-##Code for "Merkury" project
+## Code for "Merkury" project
