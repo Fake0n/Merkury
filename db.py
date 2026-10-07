@@ -61,3 +61,12 @@ def period_start(today: date, day: int = 28) -> date:
 def latest_readings(con: sqlite3.Connection, upto: date) -> dict:
     """{sn: (значение, дата)} - последнее показание на дату <= upto."""
     return {sn: (v, d) for sn, v, d in con.execute(LATEST_SQL, (upto.isoformat(),))}
+
+
+def base_reading(con: sqlite3.Connection, sn: str, start: date):
+    """Показание счётчика на начало периода: последняя запись на дату <= start, либо None."""
+    row = con.execute(
+        "SELECT result_value FROM result_data WHERE sn = ? AND date <= ? ORDER BY date DESC LIMIT 1",
+        (sn, start.isoformat()),
+    ).fetchone()
+    return row[0] if row else None

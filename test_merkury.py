@@ -112,6 +112,7 @@ def test_exporter():
         assert sample("merkury_energy_tariff_kwh", tariff="1", **L) == 10.5 * 80
         assert sample("merkury_voltage", phase="2", **L) == 231
         assert con.execute("SELECT result_value FROM result_data WHERE sn=?", (s,)).fetchone() == (15.0,)
+        assert sample("merkury_period_kwh", **L) is None               # базы на 28-е ещё нет
 
         RESPONSES[s] = (500, "")  # шлюз упал
         ex.poll_meter(sess, con, s, meter, last, "2026-09-24")
@@ -132,6 +133,14 @@ def test_exporter():
         assert sample("merkury_voltage", phase="2", **L) is None
         assert sample("merkury_voltage", phase="1", **L) == 230
         assert sample("merkury_energy_kwh", **L) == 15.5 * 80
+
+        db.save_reading(con, s, 10.0, "2026-08-28")  # база периода: потребление = (15.5 - 10) * 80
+        RESPONSES[s] = (200, body(s + "<br>", 11, 4.5))  # реальный шлюз дописывает <br>
+        ex.poll_meter(sess, con, s, meter, last, "2026-09-24")
+        assert sample("merkury_up", **L) == 1
+        assert sample("merkury_period_kwh", **L) == 5.5 * 80
+        ex.poll_meter(sess, con, s, meter, last, "2026-09-28")  # в сам день 28-го база = текущее показание
+        assert sample("merkury_period_kwh", **L) == 0
 
         RESPONSES[s] = (200, "12;1;2")  # обрезанный ответ, нет энергии
         ex.poll_meter(sess, con, s, meter, last, "2026-09-24")

@@ -53,7 +53,7 @@ scrape_configs:
 
 ## Метрики
 
-`merkury_energy_kwh{sn,name}`, `merkury_energy_tariff_kwh{sn,name,tariff}` (энергия × `coeff_trans`),
+`merkury_energy_kwh{sn,name}`, `merkury_period_kwh{sn,name}` (потребление с `MERKURY_PERIOD_DAY`-го числа, по умолчанию 28; база берётся из sqlite и не зависит от срока хранения Prometheus), `merkury_energy_tariff_kwh{sn,name,tariff}` (энергия × `coeff_trans`),
 `merkury_voltage{sn,name,phase}`, `merkury_current{sn,name,phase}`,
 `merkury_up`, `merkury_last_success_timestamp_seconds`, `merkury_poll_errors_total`.
 

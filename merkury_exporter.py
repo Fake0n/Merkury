@@ -10,7 +10,7 @@ import os
 import signal
 import threading
 import time
-from datetime import datetime
+from datetime import date, datetime
 
 import requests
 from prometheus_client import Counter, Gauge, start_http_server
@@ -29,6 +29,7 @@ INTERVAL = float(os.environ.get("MERKURY_INTERVAL", "60"))  # сек между 
 TIMEOUT = float(os.environ.get("MERKURY_TIMEOUT", "10"))    # сек на один запрос
 # Какие тарифы входят в "общее потребление". По умолчанию как в старом коде (T1+T2).
 TARIFFS = [k.strip() for k in os.environ.get("MERKURY_TARIFFS", "E1_1,E2_1").split(",") if k.strip()]
+PERIOD_DAY = int(os.environ.get("MERKURY_PERIOD_DAY", "28"))  # день начала расчётного периода
 
 KEYS = ['time', 'Ps', 'P1', 'P2', 'P3', 'Qs', 'Q1', 'Q2', 'Q3', 'Ss', 'S1', 'S2', 'S3',
         'U1', 'U2', 'U3', 'I1', 'I2', 'I3', 'Ks', 'K1', 'K2', 'K3', 'F1', 'F12', 'F13',
@@ -38,6 +39,8 @@ ENERGY_KEYS = ['E1_1', 'E2_1', 'E3_1', 'E4_1']
 # --- метрики ---
 L = ["sn", "name"]
 ENERGY = Gauge("merkury_energy_kwh", "Накопительная энергия (сумма MERKURY_TARIFFS) * coeff_trans", L)
+PERIOD = Gauge("merkury_period_kwh",
+               "Потребление с начала расчётного периода (база - суточная запись sqlite) * coeff_trans", L)
 ENERGY_T = Gauge("merkury_energy_tariff_kwh", "Накопительная энергия по тарифу * coeff_trans", L + ["tariff"])
 VOLT = Gauge("merkury_voltage", "Напряжение по фазе (как отдаёт прибор)", L + ["phase"])
 CURR = Gauge("merkury_current", "Ток по фазе (как отдаёт прибор, без coeff_trans)", L + ["phase"])
@@ -66,7 +69,7 @@ def fetch(session: requests.Session, sn: str) -> dict:
     r = session.get(GATEWAY_URL, params={"action": "read_mydb_one", "sn": sn}, timeout=TIMEOUT)
     r.raise_for_status()
     d = parse(r.text)
-    got = d.get("SerialNumber", "").strip()
+    got = d.get("SerialNumber", "").replace("<br>", "").strip()  # шлюз дописывает <br> в конец ответа
     if got and got.lstrip("0") != sn.lstrip("0"):
         log.warning("%s: в ответе другой SerialNumber: %s", sn, got)
     return d
@@ -109,6 +112,15 @@ def poll_meter(session, con, sn, meter, last_total, today) -> None:
     last_total[sn] = total_raw
     db.save_reading(con, sn, round(total_raw, 3), today)  # в БД сырое значение, как раньше
     ENERGY.labels(sn, name).set(total_raw * coeff)
+    # Потребление за период считаем от записи в sqlite, поэтому оно не зависит от срока хранения Prometheus.
+    base = db.base_reading(con, sn, db.period_start(date.fromisoformat(today), PERIOD_DAY))
+    if base is None:
+        try:
+            PERIOD.remove(sn, name)
+        except KeyError:
+            pass
+    else:
+        PERIOD.labels(sn, name).set((total_raw - base) * coeff)
     for k, v in tariffs.items():
         ENERGY_T.labels(sn, name, k[1]).set(v * coeff)
     for phase in ("1", "2", "3"):
